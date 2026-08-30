@@ -15,17 +15,16 @@ pipeline {
 
   environment {
     DOCKERHUB_USER = 'athanespinoza'   // usuario de Docker Hub
-    GHCR_USER      = 'athomo001'       // usuario/organización de GitHub (para ghcr.io)
+    GHCR_USER      = 'athomo001'       // usuario  de GitHub (ghcr.io)
     IMAGE_NAME     = 'curso-devops-lab3'  // nombre base de la imagen
     DH_REPO    = "athanespinoza/curso-devops-lab3"
     GHCR_REPO  = "ghcr.io/athomo001/curso-devops-lab3"
-    //K8S_NAMESPACE  = '<TUNAMESPACE>'      // namespace de Kubernetes a actualizar
-    //K8S_DEPLOYMENT = 'curso-devops-lab3'  // nombre del Deployment en kubernetes.yaml
-    //K8S_CONTAINER  = 'curso-devops-lab3'  // nombre del contenedor dentro del Deployment
+    K8S_NAMESPACE  = 'despinoza'           // namespace de Kubernetes a actualizar
+    K8S_DEPLOYMENT = 'curso-devops-lab3'   // nombre del Deployment en kubernetes.yaml
+    K8S_CONTAINER  = 'curso-devops-lab3'   // nombre del contenedor dentro del Deployment
   }
 
   stages {
-    // 1) Descarga el código del repositorio configurado en el Job de Jenkins
     stage('Checkout') {
       steps { checkout scm }
     }
@@ -124,7 +123,20 @@ pipeline {
       }
     }
 
-    // TODO (Paso 4.5): Actualizar imagen en Kubernetes,
-    //   una vez que tengas el cluster arriba y kubernetes.yaml aplicado (Paso 5)
+
+    stage('Actualizar imagen en Kubernetes (build number)') {
+      agent {
+        docker {
+          image 'alpine/k8s:1.30.0'
+          reuseNode true
+        }
+      }
+      steps {
+        withCredentials([file(credentialsId: 'curso-devops-k8s', variable: 'KUBECONFIG')]) {
+          sh "kubectl set image deployment/${K8S_DEPLOYMENT} ${K8S_CONTAINER}=ghcr.io/${GHCR_USER}/${IMAGE_NAME}:${BUILD_NUMBER} -n ${K8S_NAMESPACE}"
+          sh "kubectl rollout status deployment/${K8S_DEPLOYMENT} -n ${K8S_NAMESPACE}"
+        }
+      }
+    }
   }
 }
