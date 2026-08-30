@@ -85,4 +85,12 @@ pipeline {
         sh "docker build -t ${IMAGE_NAME}:${BUILD_NUMBER} ."
       }
     }
+
+    // TODO (Paso 4.3): Publicar en Docker Hub,
+    //   una vez que crees la credencial 'dockerhub-creds' (Paso 3)
+    // TODO (Paso 4.4): Publicar en GitHub Packages (GHCR),
+    //   una vez que crees la credencial 'github-creds' (Paso 3)
+    // TODO (Paso 4.5): Actualizar imagen en Kubernetes,
+    //   una vez que tengas el cluster arriba y kubernetes.yaml aplicado (Paso 5)
+  }
 }
