@@ -20,35 +20,27 @@ pipeline {
       steps { checkout scm }
     }
 
-    // 2) Instala las dependencias exactas fijadas en package-lock.json
-    //
-    // El agente de Jenkins no tiene Node/npm instalados (por eso fallaba
-    // "npm: not found"), así que en vez de instalar Node en Jenkins, este
-    // stage corre DENTRO de un contenedor Docker "node:20-alpine" que ya
-    // trae npm. "reuseNode: true" hace que ese contenedor use el mismo
-    // workspace donde el stage "Checkout" dejó el código, así los archivos
-    // se comparten entre stages como si fuera una sola máquina.
     stage('Instalación de dependencias') {
-      agent { docker { image 'node:20-alpine'; reuseNode true } }
+      //agent { docker { image 'node:20-alpine'; reuseNode true } }
       steps { sh 'npm ci' }
     }
 
     // 3) Corre los tests unitarios y genera coverage/lcov.info
     stage('Ejecución de pruebas') {
-      agent { docker { image 'node:20-alpine'; reuseNode true } }
+      //agent { docker { image 'node:20-alpine'; reuseNode true } }
       steps { sh 'npm run test:cov' }
     }
 
     // 4) Compila TypeScript -> JavaScript, para detectar errores de build
     // antes de gastar tiempo armando la imagen Docker
     stage('Build de la aplicación') {
-      agent { docker { image 'node:20-alpine'; reuseNode true } }
+      //agent { docker { image 'node:20-alpine'; reuseNode true } }
       steps { sh 'npm run build' }
     }
 
     // 5) Lee la versión de package.json para usarla como uno de los 3 tags
     stage('Definir versión semántica') {
-      agent { docker { image 'node:20-alpine'; reuseNode true } }
+      //agent { docker { image 'node:20-alpine'; reuseNode true } }
       steps {
         script {
           // sh(...) con returnStdout:true captura la salida del comando en
