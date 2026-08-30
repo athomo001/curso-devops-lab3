@@ -2,9 +2,11 @@ pipeline {
   agent any
 
   environment {
-    //DOCKERHUB_USER = '<DOCKERHUB_USER>'   // tu usuario de Docker Hub
-    //GHCR_USER      = '<GITHUB_USER>'      // tu usuario/organización de GitHub (para ghcr.io)
+    DOCKERHUB_USER = 'athanespinoza'   // usuario de Docker Hub
+    GHCR_USER      = 'athomo001'       // usuario/organización de GitHub (para ghcr.io)
     IMAGE_NAME     = 'curso-devops-lab3'  // nombre base de la imagen
+    DH_REPO    = "athanespinoza/curso-devops-lab3"
+    GHCR_REPO  = "ghcr.io/athomo001/curso-devops-lab3"
     //K8S_NAMESPACE  = '<TUNAMESPACE>'      // namespace de Kubernetes a actualizar
     //K8S_DEPLOYMENT = 'curso-devops-lab3'  // nombre del Deployment en kubernetes.yaml
     //K8S_CONTAINER  = 'curso-devops-lab3'  // nombre del contenedor dentro del Deployment
@@ -62,7 +64,7 @@ pipeline {
         }
       }
       stages {
-        stage('SonarQube - análisis de codigo') {
+        stage('SonarQube - análisis de código') {
           steps {
             withSonarQubeEnv('sonarqube') {
               sh 'sonar-scanner'
@@ -72,7 +74,7 @@ pipeline {
 
         stage('Quality Gate') {
           steps {
-            timeout(time: 5, unit: 'MINUTES') {
+            timeout(time: 1, unit: 'MINUTES') {
               waitForQualityGate abortPipeline: true
             }
           }
@@ -86,10 +88,27 @@ pipeline {
       }
     }
 
-    // TODO (Paso 4.3): Publicar en Docker Hub,
-    //   una vez que crees la credencial 'dockerhub-creds' (Paso 3)
-    // TODO (Paso 4.4): Publicar en GitHub Packages (GHCR),
-    //   una vez que crees la credencial 'github-creds' (Paso 3)
+    stage('Publicar en Docker Hub') {
+      steps {
+        script{
+            tagAndpushDockerHub(env.IMAGE_NAME, env.DH_REPO, 'https://index.docker.io/v1/', 'curso-devops-dh')
+        }
+         
+        }
+      }
+    }
+
+    // Mismo patrón que el stage anterior, pero apuntando al registry de
+    // GitHub (ghcr.io) en vez de Docker Hub
+    stage('Publicar en GitHub Packages (GHCR)') {
+      steps {
+        script{
+            tagAndpushDockerHub(env.IMAGE_NAME, env.GHCR_REPO, 'https://ghcr.io', 'curso-devops-gh')
+        }
+        }
+      }
+    }
+
     // TODO (Paso 4.5): Actualizar imagen en Kubernetes,
     //   una vez que tengas el cluster arriba y kubernetes.yaml aplicado (Paso 5)
   }
