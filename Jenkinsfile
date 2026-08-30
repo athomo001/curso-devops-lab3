@@ -122,7 +122,7 @@ pipeline {
         }
       }
     }
-.
+
     stage('Actualizar imagen en Kubernetes (build number)') {
       agent {
         docker {
