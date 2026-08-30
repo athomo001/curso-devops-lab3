@@ -20,35 +20,42 @@ pipeline {
       steps { checkout scm }
     }
 
-    stage('Instalación de dependencias') {
-      //agent { docker { image 'node:20-alpine'; reuseNode true } }
-      steps { sh 'npm ci' }
-    }
+    // 2-5) Todo lo que necesita npm va agrupado bajo UN solo stage padre,
+    // que declara el agente Docker una sola vez ("agent { docker {...} }").
+    // Los stages hijos (en "stages", no "steps") heredan ese mismo
+    // contenedor y el mismo workspace ("reuseNode: true"), así no hay que
+    // repetir la línea del agente en cada uno.
+    stage('CI - Integración continua') {
+      agent { docker { image 'node:20-alpine'; reuseNode true } }
+      stages {
+        // Instala las dependencias exactas fijadas en package-lock.json
+        stage('Instalación de dependencias') {
+          steps { sh 'npm ci' }
+        }
 
-    // 3) Corre los tests unitarios y genera coverage/lcov.info
-    stage('Ejecución de pruebas') {
-      //agent { docker { image 'node:20-alpine'; reuseNode true } }
-      steps { sh 'npm run test:cov' }
-    }
+        // Corre los tests unitarios y genera coverage/lcov.info
+        stage('Ejecución de pruebas') {
+          steps { sh 'npm run test:cov' }
+        }
 
-    // 4) Compila TypeScript -> JavaScript, para detectar errores de build
-    // antes de gastar tiempo armando la imagen Docker
-    stage('Build de la aplicación') {
-      //agent { docker { image 'node:20-alpine'; reuseNode true } }
-      steps { sh 'npm run build' }
-    }
+        // Compila TypeScript -> JavaScript, para detectar errores de build
+        // antes de gastar tiempo armando la imagen Docker
+        stage('Build de la aplicación') {
+          steps { sh 'npm run build' }
+        }
 
-    // 5) Lee la versión de package.json para usarla como uno de los 3 tags
-    stage('Definir versión semántica') {
-      //agent { docker { image 'node:20-alpine'; reuseNode true } }
-      steps {
-        script {
-          // sh(...) con returnStdout:true captura la salida del comando en
-          // una variable de Groovy en vez de solo mostrarla en el log
-          env.APP_VERSION = sh(
-            script: "node -p \"require('./package.json').version\"",
-            returnStdout: true
-          ).trim()
+        // Lee la versión de package.json para usarla como uno de los 3 tags
+        stage('Definir versión semántica') {
+          steps {
+            script {
+              // sh(...) con returnStdout:true captura la salida del comando
+              // en una variable de Groovy en vez de solo mostrarla en el log
+              env.APP_VERSION = sh(
+                script: "node -p \"require('./package.json').version\"",
+                returnStdout: true
+              ).trim()
+            }
+          }
         }
       }
     }
