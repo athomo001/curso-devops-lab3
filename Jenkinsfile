@@ -124,19 +124,24 @@ pipeline {
     }
 
 
-    stage('Actualizar imagen en Kubernetes (build number)') {
-      agent {
-        docker {
-          image 'alpine/k8s:1.30.0'
-          reuseNode true
+    stage("CD - Despliegue continuo en develop"){
+        agent {
+            docker {
+                image 'alpine/k8s:1.34.6'
+                reuseNode true
+            }
         }
-      }
-      steps {
-        withCredentials([file(credentialsId: 'curso-devops-k8s', variable: 'KUBECONFIG')]) {
-          sh "kubectl set image deployment/${K8S_DEPLOYMENT} ${K8S_CONTAINER}=ghcr.io/${GHCR_USER}/${IMAGE_NAME}:${BUILD_NUMBER} -n ${K8S_NAMESPACE}"
-          sh "kubectl rollout status deployment/${K8S_DEPLOYMENT} -n ${K8S_NAMESPACE}"
+        steps{
+            script {
+                if (!env.APP_SEMANTIC_VERSION?.trim()) {
+                    error("APP_SEMANTIC_VERSION no definida para el despliegue")
+                }
+            }
+        withKubeConfig([credentialsId: 'credencial-k8']) {
+            sh """
+                kubectl -n ${env.K8S_NAMESPACE} set image deployment/${env.K8S_DEPLOYMENT} ${env.K8S_CONTAINER}=${env.DH_REPO}:${env.APP_SEMANTIC_VERSION}
+                kubectl -n ${env.K8S_NAMESPACE} rollout status deployment/${env.K8S_DEPLOYMENT}
+            """
         }
-      }
     }
-  }
 }
