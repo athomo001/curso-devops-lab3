@@ -1,3 +1,15 @@
+
+def tagAndpush(String localImage, String repo, String registry, String credential) {
+  docker.withRegistry(registry, credential) {
+    sh "docker tag ${localImage}:${env.BUILD_NUMBER} ${repo}:latest"
+    sh "docker tag ${localImage}:${env.BUILD_NUMBER} ${repo}:${env.BUILD_NUMBER}"
+    sh "docker tag ${localImage}:${env.BUILD_NUMBER} ${repo}:${env.APP_VERSION}"
+    sh "docker push ${repo}:latest"
+    sh "docker push ${repo}:${env.BUILD_NUMBER}"
+    sh "docker push ${repo}:${env.APP_VERSION}"
+  }
+}
+
 pipeline {
   agent any
 
@@ -90,10 +102,8 @@ pipeline {
 
     stage('Publicar en Docker Hub') {
       steps {
-        script{
-            tagAndpushDockerHub(env.IMAGE_NAME, env.DH_REPO, 'https://index.docker.io/v1/', 'curso-devops-dh')
-        }
-         
+        script {
+          tagAndpush(env.IMAGE_NAME, env.DH_REPO, 'https://index.docker.io/v1/', 'curso-devops-dh')
         }
       }
     }
@@ -102,9 +112,8 @@ pipeline {
     // GitHub (ghcr.io) en vez de Docker Hub
     stage('Publicar en GitHub Packages (GHCR)') {
       steps {
-        script{
-            tagAndpushDockerHub(env.IMAGE_NAME, env.GHCR_REPO, 'https://ghcr.io', 'curso-devops-gh')
-        }
+        script {
+          tagAndpush(env.IMAGE_NAME, env.GHCR_REPO, 'https://ghcr.io', 'curso-devops-gh')
         }
       }
     }
