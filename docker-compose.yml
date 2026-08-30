@@ -1,0 +1,10 @@
+services:
+  app:
+    build: .
+    image: curso-devops-lab3:local
+    container_name: curso-devops-lab3
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+    restart: unless-stopped
