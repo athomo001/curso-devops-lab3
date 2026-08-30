@@ -100,9 +100,13 @@ pipeline {
       }
     }
 
-    stage('Publicar en Docker Hub') {
+    stage('Publicar en Docker Hub') {       
       steps {
-        script {
+        sh "docker build -t ${env.IMAGE_NAME} ."
+         script {
+            if (!env.APP_SEMANTIC_VERSION?.trim()) {
+                error("APP_SEMANTIC_VERSION no definida en el stage anterior")
+                }
           tagAndpush(env.IMAGE_NAME, env.DH_REPO, 'https://index.docker.io/v1/', 'curso-devops-dh')
         }
       }
@@ -112,7 +116,11 @@ pipeline {
     // GitHub (ghcr.io) en vez de Docker Hub
     stage('Publicar en GitHub Packages (GHCR)') {
       steps {
-        script {
+        sh "docker build -t ${env.IMAGE_NAME} ."
+         script {
+            if (!env.APP_SEMANTIC_VERSION?.trim()) {
+                error("APP_SEMANTIC_VERSION no definida en el stage anterior")
+                }
           tagAndpush(env.IMAGE_NAME, env.GHCR_REPO, 'https://ghcr.io', 'curso-devops-gh')
         }
       }
