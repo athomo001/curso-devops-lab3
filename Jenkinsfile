@@ -18,11 +18,11 @@ pipeline {
 
 
     stage('CI - Integración continua') {
-      agent { 
-        docker { 
-            image 'node:20-alpine'; 
-            reuseNode true 
-            } 
+      agent {
+        docker {
+            image 'node:20-alpine';
+            reuseNode true
+            }
         }
       stages {
         // Instala las dependencias exactas fijadas en package-lock.json
@@ -52,19 +52,37 @@ pipeline {
         }
       }
     }
+
+    stage('Quality Assurance') {
+      agent {
+        docker {
+          image 'sonarsource/sonar-scanner-cli'
+          args '--network devops-infra_default'
+          reuseNode true
+        }
+      }
+      stages {
+        stage('SonarQube - análisis de codigo') {
+          steps {
+            withSonarQubeEnv('sonarqube') {
+              sh 'sonar-scanner'
+            }
+          }
+        }
+
+        stage('Quality Gate') {
+          steps {
+            timeout(time: 5, unit: 'MINUTES') {
+              waitForQualityGate abortPipeline: true
+            }
+          }
+        }
+      }
+    }
+
     stage('Construcción imagen Docker (multistage)') {
       steps {
         sh "docker build -t ${IMAGE_NAME}:${BUILD_NUMBER} ."
       }
     }
-
-    // TODO (Paso 4.2 del manual): SonarQube - análisis + Quality Gate,
-    //   una vez que tengas SonarQube corriendo (Paso 2 del manual)
-    // TODO (Paso 4.3): Publicar en Docker Hub,
-    //   una vez que crees la credencial 'dockerhub-creds' (Paso 3)
-    // TODO (Paso 4.4): Publicar en GitHub Packages (GHCR),
-    //   una vez que crees la credencial 'github-creds' (Paso 3)
-    // TODO (Paso 4.5): Actualizar imagen en Kubernetes,
-    //   una vez que tengas el cluster arriba y kubernetes.yaml aplicado (Paso 5)
-  }
 }
