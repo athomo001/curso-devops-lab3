@@ -3,9 +3,6 @@
 pipeline {
   // Corre en cualquier agente/nodo disponible de Jenkins
   agent any
-  tools {
-    nodejs 'Node20'
-  }
 
   // Variables de entorno visibles en todos los stages, como constantes del pipeline
   environment {
@@ -24,23 +21,34 @@ pipeline {
     }
 
     // 2) Instala las dependencias exactas fijadas en package-lock.json
+    //
+    // El agente de Jenkins no tiene Node/npm instalados (por eso fallaba
+    // "npm: not found"), así que en vez de instalar Node en Jenkins, este
+    // stage corre DENTRO de un contenedor Docker "node:20-alpine" que ya
+    // trae npm. "reuseNode: true" hace que ese contenedor use el mismo
+    // workspace donde el stage "Checkout" dejó el código, así los archivos
+    // se comparten entre stages como si fuera una sola máquina.
     stage('Instalación de dependencias') {
+      agent { docker { image 'node:20-alpine'; reuseNode true } }
       steps { sh 'npm ci' }
     }
 
     // 3) Corre los tests unitarios y genera coverage/lcov.info
     stage('Ejecución de pruebas') {
+      agent { docker { image 'node:20-alpine'; reuseNode true } }
       steps { sh 'npm run test:cov' }
     }
 
     // 4) Compila TypeScript -> JavaScript, para detectar errores de build
     // antes de gastar tiempo armando la imagen Docker
     stage('Build de la aplicación') {
+      agent { docker { image 'node:20-alpine'; reuseNode true } }
       steps { sh 'npm run build' }
     }
 
     // 5) Lee la versión de package.json para usarla como uno de los 3 tags
     stage('Definir versión semántica') {
+      agent { docker { image 'node:20-alpine'; reuseNode true } }
       steps {
         script {
           // sh(...) con returnStdout:true captura la salida del comando en
@@ -54,11 +62,22 @@ pipeline {
     }
 
     // 6) Construye la imagen multistage; BUILD_NUMBER es una variable que
-    // Jenkins ya trae incorporada (se autoincrementa en cada ejecución)
+    // Jenkins ya trae incorporada (se autoincrementa en cada ejecución).
+    // Este stage sí corre directo en el agente (sin "docker" wrapper):
+    // necesita el "docker" CLI del host, no npm.
     stage('Construcción imagen Docker (multistage)') {
       steps {
         sh "docker build -t ${IMAGE_NAME}:${BUILD_NUMBER} ."
       }
     }
+
+    // TODO (Paso 4.2 del manual): SonarQube - análisis + Quality Gate,
+    //   una vez que tengas SonarQube corriendo (Paso 2 del manual)
+    // TODO (Paso 4.3): Publicar en Docker Hub,
+    //   una vez que crees la credencial 'dockerhub-creds' (Paso 3)
+    // TODO (Paso 4.4): Publicar en GitHub Packages (GHCR),
+    //   una vez que crees la credencial 'github-creds' (Paso 3)
+    // TODO (Paso 4.5): Actualizar imagen en Kubernetes,
+    //   una vez que tengas el cluster arriba y kubernetes.yaml aplicado (Paso 5)
   }
 }
