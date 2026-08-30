@@ -3,6 +3,9 @@
 pipeline {
   // Corre en cualquier agente/nodo disponible de Jenkins
   agent any
+  tools {
+    nodejs 'Node20'
+  }
 
   // Variables de entorno visibles en todos los stages, como constantes del pipeline
   environment {
